@@ -110,7 +110,43 @@ function onCanvasMouseMove(event) {
     selectedSphere.material = sphereMaterial;
     selectedSphere = null;
   }
-  
+
+
+let curve;
+let curveRenderer;
+function initCurve (nbVertices) {
+    if(nbVertices == curve?.nbCells(curve.vertex))
+        return;
+    
+    curve = new Graph;
+    const curvePositions = curve.addAttribute(curve.vertex, "position");
+    curve.createEmbedding(curve.vertex);
+    let vd0 = curve.addVertex();
+    for(let i = 1; i < nbVertices; ++i) {
+        let vd1 = curve.addVertex();
+        curve.connectVertices(vd0, vd1);
+        vd0 = vd1;
+    }
+}
+
+function setCurvePositions (positions) {
+    const curvePositions = curve.getAttribute(curve.vertex, "position");
+    for(let i = 0; i < curve.nbCells(curve.vertex); ++i) {
+        curvePositions[i] = positions[i];
+    }
+}
+
+// initCurve(10);
+
+function renderCurve () {
+    curveRenderer?.edges?.delete();
+    curveRenderer = new Renderer(curve);
+    curveRenderer.edges.create({color: 0xFFFFFF});
+    curveRenderer.edges.addTo(scene);
+}
+
+// renderCurve();
+
 function deCasteljau (samples) {
     // const samples = 50;
     const step  = 1 / samples;
@@ -118,29 +154,31 @@ function deCasteljau (samples) {
     const bezier = [];
     // console.log(points);
 
-    for(let t = 0; t < samples; ++t){
+    for(let t = 0; t < samples + 1; ++t){
         const pointsT = points.map(p => p.clone());
         for (let i = 1; i < points.length; i++) {
             for (let j = 0; j < points.length - i; j++) {
-                // points[j].addScaledVectors()
-                pointsT[j].x = (1 - t*step) * pointsT[j].x + t*step * pointsT[j + 1].x;
-                pointsT[j].y = (1 - t*step) * pointsT[j].y + t*step * pointsT[j + 1].y;
+                pointsT[j].lerp(pointsT[j+1], t*step);
             }
         }
         bezier.push(pointsT[0].clone());
     }
 
-    console.log(bezier);
-    for(let s = 0; s < samples; ++s){
-        const sphereMaterial = new THREE.MeshLambertMaterial({color: 0xFF0000});
-        const sphereGeometry = new THREE.SphereGeometry(0.005, 16, 16);
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.copy(bezier[s]);
-        scene.add(sphere);
-    }
+    initCurve(samples + 1);
+    setCurvePositions(bezier);
+    renderCurve();
+}
+
+function weightedDecasteljau (samples) {
+
+}
+
+function fourPointsInterpolating(iterations) {
+    initCurve(graph.nbCells(graph.vertex))
 }
 
 window.deCasteljau = deCasteljau;
+window.fourPointsInterpolating = fourPointsInterpolating;
 
 function render()
 {
